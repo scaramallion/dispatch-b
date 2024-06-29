@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BRANCH_NAME: "update/patch"
+      GITHUB_TOKEN: ${{ secrets.CREATE_PR }}
     steps:
       - name: Checkout package
         uses: actions/checkout@v4
@@ -18,7 +19,6 @@ jobs:
       - name: Update package
         run: |
           BRANCH_NAME="autobot-update-$(date +%s)"
-          echo ${{ github.actor }}
           pwd
           git clone https://github.com/pydicom/pydicom ../pydicom
           echo -e "### Workflow dispatch testing receiver\n\n" $(date) > README.md
@@ -34,7 +34,5 @@ jobs:
           commit-message: "Automated package update"
 
       - name: Automerge Pull Request
-        with:
-          GITHUB_TOKEN: ${{ secrets.CREATE_PR }}
         run: |
             gh pr merge --auto --delete-branch --squash "$BRANCH_NAME"
