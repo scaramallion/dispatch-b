@@ -2,14 +2,12 @@ name: Receiver for package update
 
 on:
   workflow_dispatch:
-  # pull_request:
-  #   branches: [ main ]
 
 jobs:
   update-package:
     runs-on: ubuntu-latest
-    # Disallow running on events triggered by a fork
-    # if: github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      BRANCH_NAME: "update/patch"
     steps:
       - name: Checkout package
         uses: actions/checkout@v4
@@ -19,15 +17,24 @@ jobs:
           python-version: "3.10"
       - name: Update package
         run: |
+          BRANCH_NAME="autobot-update-$(date +%s)"
+          echo ${{ github.actor }}
+          pwd
+          git clone https://github.com/pydicom/pydicom ../pydicom
           echo -e "### Workflow dispatch testing receiver\n\n" $(date) > README.md
           git status
+
       - name: Create Pull Request
         # Only creates a new PR if there are changes
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.CREATE_PR }}
-          title: "[bot] Update README.md"
-          # If workflow is running from `pull_request`
-          # base: ${{ github.head_ref }}
-          # If workflow is running from `release`
-          # base: main
+          title: "[type-bot] Update README.md"
+          branch: $BRANCH_NAME
+          commit-message: "Automated package update"
+
+      - name: Automerge Pull Request
+        with:
+          GITHUB_TOKEN: ${{ secrets.CREATE_PR }}
+        run: |
+            gh pr merge --auto --delete-branch --squash "$BRANCH_NAME"
