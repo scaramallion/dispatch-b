@@ -7,32 +7,38 @@ jobs:
   update-package:
     runs-on: ubuntu-latest
     env:
-      BRANCH_NAME: "update/patch"
-      GITHUB_TOKEN: ${{ secrets.CREATE_PR }}
+      GH_TOKEN: ${{ secrets.CREATE_PR }}
     steps:
+      - name: Set branch name
+        id: branch
+        run: echo "::set-output name=branch_name::autobot-update-$(date +'%Y-%m-%d %H:%M:%S')"
       - name: Checkout package
         uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+      - name: Get latest pydicom hash
+        id: hash
+        run: |
+          CWD=$(pwd)
+          git clone https://github.com/pydicom/pydicom ../pydicom
+          cd ../pydicom
+          echo "::set-output name=pydicom_hash::$(git rev-parse HEAD)"
+          cd $CWD
       - name: Update package
         run: |
-          BRANCH_NAME="autobot-update-$(date +%s)"
-          pwd
-          git clone https://github.com/pydicom/pydicom ../pydicom
           echo -e "### Workflow dispatch testing receiver\n\n" $(date) > README.md
           git status
-
       - name: Create Pull Request
         # Only creates a new PR if there are changes
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.CREATE_PR }}
           title: "[type-bot] Update README.md"
-          branch: $BRANCH_NAME
+          branch: ${{ steps.branch.outputs.branch_name }}
           commit-message: "Automated package update"
-
+          body: "Automated package update from https://github.com/pydicom/pydicom/commit/${{ steps.hash.output.pydicom_hash }}"
       - name: Automerge Pull Request
         run: |
-            gh pr merge --auto --delete-branch --squash "$BRANCH_NAME"
+          gh pr merge --auto --delete-branch --squash "${{ steps.branch.outputs.branch_name }}"
