@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Set branch name
         id: branch
-        run: echo "::set-output name=branch_name::autobot-update-$(date +'%Y-%m-%d %H:%M:%S')"
+        run: echo "BRANCH=autobot-update-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_ENV
       - name: Checkout package
         uses: actions/checkout@v4
       - name: Set up Python
@@ -24,7 +24,7 @@ jobs:
           CWD=$(pwd)
           git clone https://github.com/pydicom/pydicom ../pydicom
           cd ../pydicom
-          echo "::set-output name=pydicom_hash::$(git rev-parse HEAD)"
+          echo "PYDICOM_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
           cd $CWD
       - name: Update package
         run: |
@@ -36,9 +36,11 @@ jobs:
         with:
           token: ${{ secrets.CREATE_PR }}
           title: "[type-bot] Update README.md"
-          branch: ${{ steps.branch.outputs.branch_name }}
+          branch: ${{ steps.branch.outputs.BRANCH }}
           commit-message: "Automated package update"
-          body: "Automated package update from https://github.com/pydicom/pydicom/commit/${{ steps.hash.output.pydicom_hash }}"
+          body: "Automated package update from https://github.com/pydicom/pydicom/commit/${{ steps.hash.outputs.PYDICOM_HASH }}"
       - name: Automerge Pull Request
+        env:
+            BRANCH: ${{ steps.branch.outputs.BRANCH }}
         run: |
-          gh pr merge --auto --delete-branch --squash "${{ steps.branch.outputs.branch_name }}"
+          gh pr merge --auto --delete-branch --squash "$BRANCH"
